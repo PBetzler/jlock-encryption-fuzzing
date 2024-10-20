@@ -5,6 +5,9 @@ on:
     branches:
       - main
 
+permissions:
+  contents: write  # Grant write permissions to the GITHUB_TOKEN
+
 jobs:
   bump_version:
     runs-on: ubuntu-latest
@@ -13,7 +16,7 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v3
       with:
-        persist-credentials: false  # We need to use the GITHUB_TOKEN manually
+        persist-credentials: false  # Using the GITHUB_TOKEN manually
 
     - name: Set up GitHub authentication
       run: |
@@ -44,14 +47,6 @@ jobs:
         echo "New version: $new_version"
         echo "::set-output name=new_version::$new_version"
 
-    - name: Create and push a new tag
-      run: |
-        new_version=${{ steps.bump_version.outputs.new_version }}
-        git tag -a "v$new_version" -m "Release version $new_version"
-        git push origin "v$new_version"
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
     - name: Update PKGBUILD with new version
       run: |
         new_version=${{ steps.bump_version.outputs.new_version }}
@@ -73,6 +68,8 @@ jobs:
         git add PKGBUILD
         git commit -m "Update PKGBUILD for version ${{ steps.bump_version.outputs.new_version }}"
         git push origin main
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Ensure GITHUB_TOKEN is used for pushing changes
 
     - name: Create and push a new tag
       run: |
@@ -80,8 +77,8 @@ jobs:
         git tag -a "v$new_version" -m "Release version $new_version"
         git push origin "v$new_version"
       env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Use GITHUB_TOKEN for pushing the tag
+
     - name: Create GitHub Release
       uses: actions/create-release@v1
       env:
