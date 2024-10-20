@@ -12,6 +12,14 @@ jobs:
     steps:
     - name: Checkout repository
       uses: actions/checkout@v3
+      with:
+        persist-credentials: false  # We need to use the GITHUB_TOKEN manually
+
+    - name: Set up GitHub authentication
+      run: |
+        git config --global user.email "actions@github.com"
+        git config --global user.name "GitHub Actions"
+        git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
 
     - name: Get the latest tag
       id: get_latest_tag
@@ -39,10 +47,10 @@ jobs:
     - name: Create and push a new tag
       run: |
         new_version=${{ steps.bump_version.outputs.new_version }}
-        git config --local user.name "GitHub Actions"
-        git config --local user.email "actions@github.com"
         git tag -a "v$new_version" -m "Release version $new_version"
         git push origin "v$new_version"
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Update PKGBUILD with new version
       run: |
@@ -62,8 +70,6 @@ jobs:
 
     - name: Commit updated PKGBUILD
       run: |
-        git config --local user.name "GitHub Actions"
-        git config --local user.email "actions@github.com"
         git add PKGBUILD
         git commit -m "Update PKGBUILD for version ${{ steps.bump_version.outputs.new_version }}"
         git push origin main
@@ -73,7 +79,9 @@ jobs:
         new_version=${{ steps.bump_version.outputs.new_version }}
         git tag -a "v$new_version" -m "Release version $new_version"
         git push origin "v$new_version"
-
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        
     - name: Create GitHub Release
       uses: actions/create-release@v1
       env:
