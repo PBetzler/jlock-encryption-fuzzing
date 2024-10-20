@@ -1,9 +1,62 @@
+#ifdef _WIN32
+#include <conio.h>
+#else
+#include <termios.h>
+#include <unistd.h>
+#endif
 #include <openssl/evp.h>
 #include <openssl/sha.h>
 #include <string.h>
 #include <stdio.h>
 #include "config.h"
 #include "libutils.h"
+
+
+void get_password(char *password, size_t max_length)
+{
+#ifdef _WIN32
+    printf("Enter password: ");
+    fflush(stdout);
+
+    size_t index = 0;
+    int ch;
+
+    while ((ch = _getch()) != '\r' && ch != '\n' && index < max_length - 1)
+    {
+        if (ch == '\b' && index > 0) 
+        {
+            index--;
+            printf("\b \b");
+        }
+        else
+        {
+            password[index++] = ch;
+            printf("*");
+        }
+    }
+    password[index] = '\0';
+    printf("\n");
+#else
+    struct termios oldt, newt;
+
+    printf("Enter password: ");
+    fflush(stdout);
+
+    tcgetattr(fileno(stdin), &oldt);
+    newt = oldt;
+    newt.c_lflag &= ~ECHO;
+    tcsetattr(fileno(stdin), TCSANOW, &newt);
+    fgets(password, max_length, stdin);
+    tcsetattr(fileno(stdin), TCSANOW, &oldt);
+    printf("\n");
+
+    size_t len = strlen(password);
+    if (len > 0 && password[len - 1] == '\n')
+    {
+        password[len - 1] = '\0';
+    }
+#endif
+}
 
 void derive_key_from_password(const char *password, unsigned char *key)
 {

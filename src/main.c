@@ -18,7 +18,7 @@ int main(int argc, char *argv[])
         }
     }
 
-    if (argc < 5)
+    if (argc < 4)
     {
         fprintf(stderr, "Error: Missing required arguments.\n");
         print_usage(stderr);
@@ -26,7 +26,7 @@ int main(int argc, char *argv[])
     }
 
     char *mode = NULL;
-    char *password = NULL;
+    char password[256] = {0};
     char *input_file = NULL;
     char *output_file = NULL;
 
@@ -39,20 +39,6 @@ int main(int argc, char *argv[])
         else if (strcmp(argv[i], "--decrypt") == 0)
         {
             mode = "decrypt";
-        }
-        else if (strcmp(argv[i], "-p") == 0)
-        {
-            if (i + 1 < argc)
-            {
-                password = argv[i + 1];
-                i++;
-            }
-            else
-            {
-                fprintf(stderr, "Error: Missing password after -p\n");
-                print_usage(stderr);
-                return 1;
-            }
         }
         else if (strcmp(argv[i], "-i") == 0)
         {
@@ -84,12 +70,14 @@ int main(int argc, char *argv[])
         }
     }
 
-    if (mode == NULL || password == NULL || input_file == NULL)
+    if (mode == NULL || input_file == NULL)
     {
         fprintf(stderr, "Error: Missing required arguments.\n");
         print_usage(stderr);
         return 1;
     }
+
+    get_password(password, sizeof(password));
 
     if (strcmp(mode, "encrypt") == 0)
     {
@@ -137,12 +125,12 @@ void print_usage(FILE *stream)
     fprintf(stream, "\nJLock - File encryption and decryption\n");
     fprintf(stream, "Developed by: devcoons\n\n");
     fprintf(stream, "Usage:\n");
-    fprintf(stream, "  jlock --encrypt|--decrypt -p <password> -i <input_file> [-o <output_file>]\n\n");
+    fprintf(stream, "  jlock --encrypt|--decrypt -i <input_file> [-o <output_file>]\n\n");
     fprintf(stream, "Options:\n");
     fprintf(stream, "  --encrypt          Encrypt the input file.\n");
     fprintf(stream, "  --decrypt          Decrypt the input file.\n");
-    fprintf(stream, "  -p <password>      Password to use for encryption/decryption.\n");
     fprintf(stream, "  -i <input_file>    Input file to encrypt/decrypt.\n");
     fprintf(stream, "  -o <output_file>   Output file name (optional).\n");
     fprintf(stream, "  -h, --help         Show this help message and exit.\n");
+    fprintf(stream, "\nNote: You will be prompted to enter the password.\n");
 }

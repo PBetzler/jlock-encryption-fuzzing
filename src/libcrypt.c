@@ -311,27 +311,32 @@ void decrypt_file(const char *password, const char *input_file, char *output_fil
 
     char *start_filename = strstr(header_str, "[f]");
     char *end_filename = strstr(header_str, "[/f]");
+    char output_filename[256] = {0};
+
     if (start_filename && end_filename)
     {
         start_filename += 3; 
         *end_filename = '\0';
 
-        char extracted_filename[256];
+        char extracted_filename[256] = {0};
         strncpy(extracted_filename, start_filename, sizeof(extracted_filename));
         extracted_filename[sizeof(extracted_filename) - 1] = '\0';
 
         char *header_extension = strrchr(extracted_filename, '.');
- 
+
         if (output_file == NULL || strlen(output_file) == 0)
         {
-            output_file = extracted_filename;
+            strncpy(output_filename, extracted_filename, sizeof(output_filename));
+            output_filename[sizeof(output_filename) - 1] = '\0';
         }
         else
         {
+            strncpy(output_filename, output_file, sizeof(output_filename));
+            output_filename[sizeof(output_filename) - 1] = '\0';
+
             char *user_extension = strrchr(output_file, '.');
             if (user_extension)
             {
-                // Warn if extensions differ
                 if (header_extension && strcmp(user_extension, header_extension) != 0)
                 {
                     fprintf(stderr, "Warning: File extension in the header (%s) differs from the user-provided extension (%s).\n", header_extension, user_extension);
@@ -339,7 +344,7 @@ void decrypt_file(const char *password, const char *input_file, char *output_fil
             }
             else if (header_extension)
             {
-                strcat(output_file, header_extension);
+                strcat(output_filename, header_extension);
             }
         }
     }
@@ -350,7 +355,7 @@ void decrypt_file(const char *password, const char *input_file, char *output_fil
         return;
     }
 
-    FILE *out_fp = fopen(output_file, "wb");
+    FILE *out_fp = fopen(output_filename, "wb");
     if (out_fp == NULL)
     {
         fprintf(stderr, "Error: Opening output file.\n");
@@ -358,7 +363,7 @@ void decrypt_file(const char *password, const char *input_file, char *output_fil
         return;
     }
 
-    unsigned char inbuf[5242896]; // 5 MB + padding
+    unsigned char inbuf[5242896]; 
     size_t inlen;
     while ((inlen = fread(inbuf, 1, sizeof(inbuf), in_fp)) > 0)
     {
