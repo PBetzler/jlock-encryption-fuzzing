@@ -6,7 +6,7 @@ on:
       - main
 
 permissions:
-  contents: write  # Grant write permissions to the GITHUB_TOKEN
+  contents: write  # Ensure GITHUB_TOKEN has write permissions
 
 jobs:
   bump_version:
@@ -47,11 +47,13 @@ jobs:
         echo "New version: $new_version"
         echo "::set-output name=new_version::$new_version"
 
-    - name: Update PKGBUILD with new version
+    - name: Create and push a new tag
       run: |
         new_version=${{ steps.bump_version.outputs.new_version }}
-        sed -i "s/pkgver=.*/pkgver=${new_version}/" PKGBUILD
-        sed -i "s|source=.*|source=(\"jlock-encryption-$new_version.tar.gz::https://github.com/${{ github.repository }}/archive/refs/tags/v${new_version}.tar.gz\")|" PKGBUILD
+        git tag -a "v$new_version" -m "Release version $new_version"
+        git push origin "v$new_version"
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Use GITHUB_TOKEN to push the tag
 
     - name: Download source tarball
       run: |
@@ -63,6 +65,12 @@ jobs:
         sha256sum=$(sha256sum source.tar.gz | cut -d ' ' -f 1)
         sed -i "s/sha256sums=.*/sha256sums=('$sha256sum')/" PKGBUILD
 
+    - name: Update PKGBUILD with new version
+      run: |
+        new_version=${{ steps.bump_version.outputs.new_version }}
+        sed -i "s/pkgver=.*/pkgver=${new_version}/" PKGBUILD
+        sed -i "s|source=.*|source=(\"jlock-encryption-$new_version.tar.gz::https://github.com/${{ github.repository }}/archive/refs/tags/v${new_version}.tar.gz\")|" PKGBUILD
+
     - name: Commit updated PKGBUILD
       run: |
         git add PKGBUILD
@@ -70,14 +78,6 @@ jobs:
         git push origin main
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Ensure GITHUB_TOKEN is used for pushing changes
-
-    - name: Create and push a new tag
-      run: |
-        new_version=${{ steps.bump_version.outputs.new_version }}
-        git tag -a "v$new_version" -m "Release version $new_version"
-        git push origin "v$new_version"
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Use GITHUB_TOKEN for pushing the tag
 
     - name: Create GitHub Release
       uses: actions/create-release@v1
