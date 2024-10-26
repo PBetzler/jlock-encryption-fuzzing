@@ -16,7 +16,7 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v3
       with:
-        fetch-depth: 0 
+        fetch-depth: 0  # Fetch all history to access all tags
         persist-credentials: false  # Using the GITHUB_TOKEN manually
 
     - name: Set up GitHub authentication
@@ -28,16 +28,16 @@ jobs:
     - name: Get the latest tag
       id: get_latest_tag
       run: |
-        # Get the latest tag from Git
-        latest_tag=$(git describe --tags `git rev-list --tags --max-count=1` 2>/dev/null || echo "0.0.0")
-        echo "Latest tag: $latest_tag"
-        echo "::set-output name=latest_tag::$latest_tag"
+        # Get the latest tag and remove any leading 'v' character
+        latest_tag=$(git describe --tags $(git rev-list --tags --max-count=1) 2>/dev/null | sed 's/^v//')
+        echo "Latest tag without 'v' prefix: $latest_tag"
+        echo "latest_tag=$latest_tag" >> $GITHUB_ENV
 
     - name: Bump version
       id: bump_version
       run: |
         # Extract major, minor, and patch from the latest tag
-        IFS='.' read -r -a version_parts <<< "${{ steps.get_latest_tag.outputs.latest_tag }}"
+        IFS='.' read -r -a version_parts <<< "${{ env.latest_tag }}"
         major="${version_parts[0]}"
         minor="${version_parts[1]}"
         patch="${version_parts[2]}"
@@ -46,19 +46,20 @@ jobs:
         new_patch=$((patch + 1))
         new_version="$major.$minor.$new_patch"
         echo "New version: $new_version"
-        echo "::set-output name=new_version::$new_version"
+        echo "new_version=$new_version" >> $GITHUB_ENV
 
     - name: Create and push a new tag
       run: |
-        new_version=${{ steps.bump_version.outputs.new_version }}
-        git tag -a "v$new_version" -m "Release version $new_version"
-        git push origin "v$new_version"
+        # Prepend 'v' to the new version only once
+        new_version="v${{ env.new_version }}"
+        git tag -a "$new_version" -m "Release version $new_version"
+        git push origin "$new_version"
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Use GITHUB_TOKEN to push the tag
 
     - name: Download source tarball
       run: |
-        new_version=${{ steps.bump_version.outputs.new_version }}
+        new_version=${{ env.new_version }}
         wget https://github.com/${{ github.repository }}/archive/refs/tags/v${new_version}.tar.gz -O source.tar.gz
 
     - name: Calculate sha256sum
@@ -68,14 +69,14 @@ jobs:
 
     - name: Update PKGBUILD with new version
       run: |
-        new_version=${{ steps.bump_version.outputs.new_version }}
+        new_version=${{ env.new_version }}
         sed -i "s/pkgver=.*/pkgver=${new_version}/" PKGBUILD
         sed -i "s|source=.*|source=(\"jlock-encryption-$new_version.tar.gz::https://github.com/${{ github.repository }}/archive/refs/tags/v${new_version}.tar.gz\")|" PKGBUILD
 
     - name: Commit updated PKGBUILD
       run: |
         git add PKGBUILD
-        git commit -m "Update PKGBUILD for version ${{ steps.bump_version.outputs.new_version }}"
+        git commit -m "Update PKGBUILD for version ${{ env.new_version }}"
         git push origin main
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Ensure GITHUB_TOKEN is used for pushing changes
@@ -85,8 +86,8 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        tag_name: "v${{ steps.bump_version.outputs.new_version }}"
-        release_name: "Release v${{ steps.bump_version.outputs.new_version }}"
+        tag_name: "v${{ env.new_version }}"
+        release_name: "Release v${{ env.new_version }}"
         draft: false
         prerelease: false
         body: "Release generated from commit ${{ github.sha }}"
