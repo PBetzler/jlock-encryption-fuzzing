@@ -16,6 +16,7 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v3
       with:
+        fetch-depth: 0 
         persist-credentials: false  # Using the GITHUB_TOKEN manually
 
     - name: Set up GitHub authentication
