@@ -1,3 +1,32 @@
+/*!
+    @file   libcrypt.c
+    @brief  Provides file encryption and decryption functions using AES and OpenSSL
+    @t.odo  -
+    ---------------------------------------------------------------------------
+    
+	MIT License
+	Copyright (c) 2024 Io. D (Devcoons)
+    
+    Permission is hereby granted, free of charge, to any person obtaining a copy
+    of this software and associated documentation files (the "Software"), to deal
+    in the Software without restriction, including without limitation the rights
+    to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+    copies of the Software, and to permit persons to whom the Software is
+    furnished to do so, subject to the following conditions:
+    The above copyright notice and this permission notice shall be included in
+    all copies or substantial portions of the Software.
+    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+    AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+    OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+    SOFTWARE.
+*/
+/******************************************************************************
+* Includes
+******************************************************************************/
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -5,10 +34,24 @@
 #include <openssl/aes.h>
 #include <openssl/rand.h>
 #include <openssl/sha.h>
+#include <openssl/md5.h>
 #include "config.h"
 #include "libcrypt.h"
 #include "libutils.h"
 
+/******************************************************************************
+* Definition | Public Functions
+******************************************************************************/
+
+/*!
+    @brief Encrypts data using AES-256-CBC with a password-derived key
+    @param[in] password - The password for key derivation
+    @param[in] input - The data to be encrypted
+    @param[in] input_len - Length of the input data
+    @param[out] output_len - Pointer to store the length of the encrypted data
+    @param[in] iv - Initialization vector for encryption
+    @return Pointer to the encrypted data or NULL on failure
+*/
 unsigned char* AesEncrypt(const char* password, unsigned char* input, int input_len, int* output_len, unsigned char* iv)
 {
     unsigned char key[AES_KEY_SIZE];
@@ -65,6 +108,15 @@ unsigned char* AesEncrypt(const char* password, unsigned char* input, int input_
     return output;
 }
 
+/*!
+    @brief Decrypts data using AES-256-CBC with a password-derived key
+    @param[in] password - The password for key derivation
+    @param[in] input - The encrypted data to be decrypted
+    @param[in] input_len - Length of the encrypted data
+    @param[out] output_len - Pointer to store the length of the decrypted data
+    @param[in] iv - Initialization vector for decryption
+    @return Pointer to the decrypted data or NULL on failure
+*/
 unsigned char* AesDecrypt(const char* password, unsigned char* input, int input_len, int* output_len, unsigned char* iv)
 {
     unsigned char key[AES_KEY_SIZE];
@@ -120,9 +172,14 @@ unsigned char* AesDecrypt(const char* password, unsigned char* input, int input_
     return output;
 }
 
+/*!
+    @brief Encrypts a file using AES-256-CBC and writes to an output file
+    @param[in] password - The password for key derivation
+    @param[in] input_file - Path to the input file to encrypt
+    @param[in] output_file - Path to the output file to save the encrypted data
+*/
 void encrypt_file(const char *password, const char *input_file, const char *output_file)
 {
-    // Open input and output files
     FILE *in_fp = fopen(input_file, "rb");
     FILE *out_fp = fopen(output_file, "wb");
 
@@ -134,11 +191,9 @@ void encrypt_file(const char *password, const char *input_file, const char *outp
         return;
     }
 
-    // Compute SHA-256 hash of the input file
     unsigned char file_hash[SHA256_DIGEST_LENGTH];
     compute_sha256_hash(input_file, file_hash);
 
-    // Get the filename from the input_file path
     const char *filename = strrchr(input_file, '/');
     if (filename == NULL)
     {
@@ -146,10 +201,9 @@ void encrypt_file(const char *password, const char *input_file, const char *outp
     }
     else
     {
-        filename++; // Skip past '/'
+        filename++;
     }
 
-    // Generate random IV
     unsigned char iv[IV_SIZE];
     if (!RAND_bytes(iv, IV_SIZE))
     {
@@ -159,59 +213,49 @@ void encrypt_file(const char *password, const char *input_file, const char *outp
         return;
     }
 
-    // Write plaintext header: magic number, version, IV
-    fwrite(MAGIC_NUMBER, 1, MAGIC_NUMBER_LEN, out_fp); // Magic number
-    fwrite(VERSION_NEW, 1, VERSION_LENGTH, out_fp);    // Version number ("0004")
-    fwrite(iv, 1, IV_SIZE, out_fp);                    // Random IV
+    fwrite(MAGIC_NUMBER, 1, MAGIC_NUMBER_LEN, out_fp);
+    fwrite(VERSION_NEW, 1, VERSION_LENGTH, out_fp);
+    fwrite(iv, 1, IV_SIZE, out_fp);
 
-    // Create the header string
     char header_template[] = "[JLK][v]%s[/v][f]%s[/f][h]%s[/h][/JLK]";
     char file_hash_hex[SHA256_DIGEST_LENGTH * 2 + 1] = {0};
 
-    // Convert file_hash to uppercase hex string
     for (int i = 0; i < SHA256_DIGEST_LENGTH; i++)
     {
         sprintf(&file_hash_hex[i * 2], "%02X", file_hash[i]);
     }
 
-    // Create the header string with version VERSION_NEW
-    char header_str[HEADER_SIZE + 1]; // 252 characters + null terminator
+    char header_str[HEADER_SIZE + 1];
     snprintf(header_str, sizeof(header_str), header_template, VERSION_NEW, filename, file_hash_hex);
 
-    // Pad the header to 252 characters with '0's
     size_t header_len = strlen(header_str);
     if (header_len < HEADER_SIZE)
     {
         memset(header_str + header_len, '0', HEADER_SIZE - header_len);
-        header_str[HEADER_SIZE] = '\0'; // Null terminator
+        header_str[HEADER_SIZE] = '\0';
     }
 
-    // Convert header_str to UTF-16LE bytes
     unsigned char header_utf16le[HEADER_BYTES];
     for (int i = 0; i < HEADER_SIZE; i++)
     {
-        header_utf16le[i * 2] = header_str[i];       // Low byte
-        header_utf16le[i * 2 + 1] = 0x00;            // High byte
+        header_utf16le[i * 2] = header_str[i];
+        header_utf16le[i * 2 + 1] = 0x00;
     }
 
-    // Encrypt the header using the random IV
     int encrypted_header_len = 0;
     unsigned char *encrypted_header = AesEncrypt(password, header_utf16le, HEADER_BYTES, &encrypted_header_len, iv);
     if (encrypted_header == NULL || encrypted_header_len != ENCRYPTED_HEADER_SIZE)
     {
-        // Handle error
         fprintf(stderr, "Error: Encrypting header.\n");
         fclose(in_fp);
         fclose(out_fp);
         return;
     }
 
-    // Write the encrypted header to the output file
     fwrite(encrypted_header, 1, encrypted_header_len, out_fp);
     free(encrypted_header);
 
-    // Encrypt and write file content in chunks using the random IV
-    unsigned char inbuf[5242880]; // 5 MB chunks
+    unsigned char inbuf[5242880];
     size_t inlen;
     while ((inlen = fread(inbuf, 1, sizeof(inbuf), in_fp)) > 0)
     {
@@ -228,14 +272,18 @@ void encrypt_file(const char *password, const char *input_file, const char *outp
         free(encrypted_data);
     }
 
-    // Close files
     fclose(in_fp);
     fclose(out_fp);
 }
 
+/*!
+    @brief Decrypts an AES-256-CBC encrypted file and writes to an output file
+    @param[in] password - The password for key derivation
+    @param[in] input_file - Path to the encrypted input file
+    @param[in] output_file - Path to the output file to save the decrypted data
+*/
 void decrypt_file(const char *password, const char *input_file, char *output_file)
 {
-    // Open input file
     FILE *in_fp = fopen(input_file, "rb");
     if (in_fp == NULL)
     {
@@ -243,7 +291,6 @@ void decrypt_file(const char *password, const char *input_file, char *output_fil
         return;
     }
 
-    // Read the magic number
     char magic_number[MAGIC_NUMBER_LEN + 1] = {0};
     size_t read_bytes = fread(magic_number, 1, MAGIC_NUMBER_LEN, in_fp);
     if (read_bytes != MAGIC_NUMBER_LEN)
@@ -260,7 +307,6 @@ void decrypt_file(const char *password, const char *input_file, char *output_fil
 
     if (strncmp(magic_number, MAGIC_NUMBER, MAGIC_NUMBER_LEN) == 0)
     {
-        // Version 0004 with random IV
         char version[VERSION_LENGTH + 1] = {0};
         fread(version, 1, VERSION_LENGTH, in_fp);
         fread(iv, 1, IV_SIZE, in_fp);
@@ -269,7 +315,6 @@ void decrypt_file(const char *password, const char *input_file, char *output_fil
     {
         fseek(in_fp, 0, SEEK_SET);
     }
-
 
     unsigned char encrypted_header[ENCRYPTED_HEADER_SIZE];
     size_t header_size = fread(encrypted_header, 1, ENCRYPTED_HEADER_SIZE, in_fp);
@@ -280,7 +325,6 @@ void decrypt_file(const char *password, const char *input_file, char *output_fil
         return;
     }
 
-
     int decrypted_header_len = 0;
     unsigned char *decrypted_header = AesDecrypt(password, encrypted_header, ENCRYPTED_HEADER_SIZE, &decrypted_header_len, iv);
     if (decrypted_header == NULL || decrypted_header_len != HEADER_BYTES)
@@ -290,16 +334,14 @@ void decrypt_file(const char *password, const char *input_file, char *output_fil
         return;
     }
 
-
     char header_str[HEADER_SIZE + 1];
     for (int i = 0; i < HEADER_SIZE; i++)
     {
-        header_str[i] = decrypted_header[i * 2]; 
+        header_str[i] = decrypted_header[i * 2];
     }
     header_str[HEADER_SIZE] = '\0';
     free(decrypted_header);
 
-    // Remove '0's padding
     for (int i = HEADER_SIZE - 1; i >= 0; i--)
     {
         if (header_str[i] == '0')
@@ -308,19 +350,17 @@ void decrypt_file(const char *password, const char *input_file, char *output_fil
             break;
     }
 
-
     char *start_filename = strstr(header_str, "[f]");
     char *end_filename = strstr(header_str, "[/f]");
     char output_filename[256] = {0};
 
     if (start_filename && end_filename)
     {
-        start_filename += 3; 
+        start_filename += 3;
         *end_filename = '\0';
 
         char extracted_filename[256] = {0};
-        strncpy(extracted_filename, start_filename, sizeof(extracted_filename));
-        extracted_filename[sizeof(extracted_filename) - 1] = '\0';
+        snprintf(extracted_filename, sizeof(extracted_filename), "%s", start_filename);
 
         char *header_extension = strrchr(extracted_filename, '.');
 
@@ -363,7 +403,7 @@ void decrypt_file(const char *password, const char *input_file, char *output_fil
         return;
     }
 
-    unsigned char inbuf[5242896]; 
+    unsigned char inbuf[5242896];
     size_t inlen;
     while ((inlen = fread(inbuf, 1, sizeof(inbuf), in_fp)) > 0)
     {
@@ -383,3 +423,7 @@ void decrypt_file(const char *password, const char *input_file, char *output_fil
     fclose(in_fp);
     fclose(out_fp);
 }
+
+/******************************************************************************
+* EOF - NO CODE AFTER THIS LINE
+******************************************************************************/

@@ -1,11 +1,11 @@
 /*!
-	@file   libutils.h
-	@brief  Header file for utility functions used in file handling, hashing, and password management
+	@file   libchecksum.h
+	@brief  Header file for checksum computation and printing functions
 	@t.odo  -
 	---------------------------------------------------------------------------
 
 	MIT License
-	Copyright (c) 2021
+	Copyright (c) 2024 Io. D (Devcoons)
 
 	Permission is hereby granted, free of charge, to any person obtaining a copy
 	of this software and associated documentation files (the "Software"), to deal
@@ -29,49 +29,36 @@
 * Preprocessor Definitions & Macros
 ******************************************************************************/
 
-#ifndef LIBUTILS_H
-#define LIBUTILS_H
+#ifndef LIBCHECKSUM_H
+#define LIBCHECKSUM_H
+
+/******************************************************************************
+* Includes
+******************************************************************************/
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdbool.h>
+
+/******************************************************************************
+* Macro Definitions
+******************************************************************************/
+
+#define BUFFER_SIZE 4096  /*!< Buffer size used for reading file chunks */
 
 /******************************************************************************
 * Function Prototypes
 ******************************************************************************/
 
 /*!
-    @brief Prompts the user to enter a password, hiding input characters
-    @param[out] password - Buffer to store the entered password
-    @param[in] max_length - Maximum length of the password buffer
+    @brief Computes and prints the MD5, SHA1, and SHA256 checksums for a file
+    @param[in] file_path - Path to the file for checksum computation
+    @return 0 on success, non-zero on failure
 */
-void get_password(char *password, size_t max_length);
-
-/*!
-    @brief Derives a SHA-256 hash key from the given password
-    @param[in] password - Input password string
-    @param[out] key - Buffer to store the derived key
-*/
-void derive_key_from_password(const char *password, unsigned char *key);
-
-/*!
-    @brief Computes the SHA-256 hash of a given file
-    @param[in] filename - Name of the file to hash
-    @param[out] output_hash - Buffer to store the computed hash
-*/
-void compute_sha256_hash(const char *filename, unsigned char *output_hash);
-
-/*!
-    @brief Checks if a file exists by attempting to open it
-    @param[in] filename - Name of the file to check
-    @return 0 if the file exists, -1 otherwise
-*/
-int file_exists(const char *filename);
-
-/*!
-    @brief Checks if a file can be opened for writing (appending)
-    @param[in] filename - Name of the file to check
-    @return 0 if the file can be written to, -1 otherwise
-*/
-int can_write_file_fopen(const char *filename);
+int compute_and_print_checksums(const char *file_path);
 
 /******************************************************************************
 * EOF - NO CODE AFTER THIS LINE
 ******************************************************************************/
-#endif // LIBUTILS_H
+#endif // LIBCHECKSUM_H

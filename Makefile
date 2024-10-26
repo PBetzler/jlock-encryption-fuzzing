@@ -1,21 +1,24 @@
 CC = gcc
-CFLAGS = -Wall -Wextra -O2 -lcrypto  # Removed debugging flags for release builds
+CFLAGS = -Wall -Wextra -O2
+LDFLAGS = -lcrypto
 
 SRC_DIR = src
 BIN_DIR = bin
 SRC = $(shell find $(SRC_DIR) -name "*.c")
 OBJ = $(SRC:.c=.o)
-EXEC = jlock  # Name of the executable without bin path
+EXEC = jlock  
 
-PREFIX ?= /usr/local  # Default install path
+PREFIX ?=
+DESTDIR ?=
 
 all: $(BIN_DIR) $(EXEC)
+build: $(BIN_DIR) $(EXEC)
 
 $(BIN_DIR):
 	mkdir -p $(BIN_DIR)
 
 $(EXEC): $(OBJ)
-	$(CC) $(OBJ) -o $(BIN_DIR)/$(EXEC) $(CFLAGS)
+	$(CC) $(OBJ) -o $(BIN_DIR)/$(EXEC) $(LDFLAGS)
 
 %.o: %.c
 	$(CC) $(CFLAGS) -c $< -o $@
