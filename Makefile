@@ -12,6 +12,7 @@ PREFIX ?=
 DESTDIR ?=
 
 all: $(BIN_DIR) $(EXEC)
+
 build: $(BIN_DIR) $(EXEC)
 
 $(BIN_DIR):
