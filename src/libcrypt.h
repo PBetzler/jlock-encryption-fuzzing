@@ -61,7 +61,7 @@ void encrypt_file(const char *password, const char *input_file, const char *outp
     @param[in] input_file - Path to the encrypted input file
     @param[in] output_file - Path to the output file for decrypted data
 */
-void decrypt_file(const char *password, const char *input_file, char *output_file);
+void decrypt_file(const char *password, const char *input_file, const char *output_file);
 
 /*!
     @brief Encrypts data using AES-256-CBC with a password-derived key

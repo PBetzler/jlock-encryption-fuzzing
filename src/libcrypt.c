@@ -282,7 +282,7 @@ void encrypt_file(const char *password, const char *input_file, const char *outp
     @param[in] input_file - Path to the encrypted input file
     @param[in] output_file - Path to the output file to save the decrypted data
 */
-void decrypt_file(const char *password, const char *input_file, char *output_file)
+void decrypt_file(const char *password, const char *input_file, const char *output_file)
 {
     FILE *in_fp = fopen(input_file, "rb");
     if (in_fp == NULL)

@@ -42,13 +42,14 @@ FUZZ_TEST(const uint8_t *data, size_t size) {
   std::string password = fdp.ConsumeBytesAsString(fdp.ConsumeIntegralInRange(0, 512));
   std::string unencrypted_file_name = fdp.ConsumeBytesAsString(fdp.ConsumeIntegralInRange(0, 100));
   std::string encrypted_file_name = fdp.ConsumeBytesAsString(fdp.ConsumeIntegralInRange(0, 100));
-  char* re_unencrypted_file_full_path;
+  std::string re_unencrypted_file_name = fdp.ConsumeBytesAsString(fdp.ConsumeIntegralInRange(0, 100));
 
   // std::string unencrypted_file_name = "unencrypted_file_name";
   // std::string encrypted_file_name = "encrypted_file_name";
 
   std::filesystem::path unencrypted_file_full_path = TEST_OUTPUT_DIR / unencrypted_file_name;
-  std::filesystem::path encrypted_file_full_path = TEST_OUTPUT_DIR /  encrypted_file_name;
+  std::filesystem::path encrypted_file_full_path = TEST_OUTPUT_DIR / encrypted_file_name;
+  std::filesystem::path re_unencrypted_file_full_path = TEST_OUTPUT_DIR / re_unencrypted_file_name;
 
   // std::cerr << "Unencrypted file name: " << unencrypted_file_full_path<<std::endl;
   // std::cerr << "Encrypted file name: " << encrypted_file_full_path<<std::endl;
@@ -63,19 +64,23 @@ FUZZ_TEST(const uint8_t *data, size_t size) {
   myFile.close();
 
   myFile.open(encrypted_file_full_path, std::ios::out);
-
   if (!myFile) {
       return;
   }
   myFile.close();
 
+  myFile.open(re_unencrypted_file_full_path, std::ios::out);
+  if (!myFile) {
+      return;
+  }
+  myFile.close();  
 
-  encrypt_file(password.c_str(), unencrypted_file_full_path.c_str(), encrypted_file_name.c_str());
-  decrypt_file(password.c_str(), encrypted_file_full_path.c_str(), re_unencrypted_file_full_path);
+  encrypt_file(password.c_str(), unencrypted_file_full_path.c_str(), encrypted_file_full_path.c_str());
+  decrypt_file(password.c_str(), encrypted_file_full_path.c_str(), re_unencrypted_file_full_path.c_str());
 
   deleteFile(unencrypted_file_full_path.c_str());  
   deleteFile(encrypted_file_full_path.c_str());
-  //deleteFile(re_unencrypted_file_full_path);
+  deleteFile(re_unencrypted_file_full_path.c_str());
 }
 
 
