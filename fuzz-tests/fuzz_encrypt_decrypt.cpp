@@ -24,7 +24,7 @@ FUZZ_TEST_SETUP() {
   }
 }
 
-void deleteFile(const char* fileToDelete) {
+void deleteFile(std::filesystem::path fileToDelete) {
   try {
     if (!std::filesystem::remove(fileToDelete))
       std::cerr << "Did not find file to delete: " << fileToDelete<<std::endl;
@@ -43,16 +43,10 @@ FUZZ_TEST(const uint8_t *data, size_t size) {
   std::string unencrypted_file_name = fdp.ConsumeBytesAsString(fdp.ConsumeIntegralInRange(0, 100));
   std::string encrypted_file_name = fdp.ConsumeBytesAsString(fdp.ConsumeIntegralInRange(0, 100));
   std::string re_unencrypted_file_name = fdp.ConsumeBytesAsString(fdp.ConsumeIntegralInRange(0, 100));
-
-  // std::string unencrypted_file_name = "unencrypted_file_name";
-  // std::string encrypted_file_name = "encrypted_file_name";
-
   std::filesystem::path unencrypted_file_full_path = TEST_OUTPUT_DIR / unencrypted_file_name;
   std::filesystem::path encrypted_file_full_path = TEST_OUTPUT_DIR / encrypted_file_name;
   std::filesystem::path re_unencrypted_file_full_path = TEST_OUTPUT_DIR / re_unencrypted_file_name;
 
-  // std::cerr << "Unencrypted file name: " << unencrypted_file_full_path<<std::endl;
-  // std::cerr << "Encrypted file name: " << encrypted_file_full_path<<std::endl;
   std::fstream myFile;
   myFile.open(unencrypted_file_full_path, std::ios::out);
 
@@ -78,9 +72,9 @@ FUZZ_TEST(const uint8_t *data, size_t size) {
   encrypt_file(password.c_str(), unencrypted_file_full_path.c_str(), encrypted_file_full_path.c_str());
   decrypt_file(password.c_str(), encrypted_file_full_path.c_str(), re_unencrypted_file_full_path.c_str());
 
-  deleteFile(unencrypted_file_full_path.c_str());  
-  deleteFile(encrypted_file_full_path.c_str());
-  deleteFile(re_unencrypted_file_full_path.c_str());
+  deleteFile(unencrypted_file_full_path);  
+  deleteFile(encrypted_file_full_path);
+  deleteFile(re_unencrypted_file_full_path);
 }
 
 
