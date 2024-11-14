@@ -1,0 +1,13 @@
+build/
+.vscode/
+.idea/
+cmake-build-debug/
+
+*cifuzz*/
+*fuzz*_inputs
+.sarif/
+
+lcov.info
+
+test-output/**
+!test-output/.gitkeep
